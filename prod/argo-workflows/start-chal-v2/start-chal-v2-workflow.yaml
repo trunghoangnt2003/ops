@@ -1,0 +1,62 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: start-chal-v2-
+  namespace: argo
+  annotations:
+    workflows.argoproj.io/description: "Workflow to run start-chal-v2-template"
+spec:
+  entrypoint: main
+  serviceAccountName: argo-sa
+  arguments:
+    parameters:
+      - name: CHALLENGE_NAME
+        value: "chal-v2-04"
+      - name: CONTAINER_PORT
+        value: "80"
+      - name: CONTAINER_IMAGE
+        value: "quachuoiscontainer/chilp-chall:v0.0.2"
+      - name: CPU_LIMIT
+        value: "300m"
+      - name: CPU_REQUEST
+        value: "300m"
+      - name: MEMORY_LIMIT
+        value: "256Mi"
+      - name: MEMORY_REQUEST
+        value: "256Mi"
+      - name: IS_TEMPORARY
+        value: "true"
+      - name: CHALLENGE_TIMEOUT
+        value: "15m"
+      - name: POW_DIFFICULTY_SECONDS
+        value: "5"
+
+  templates:
+    - name: main
+      steps:
+        - - name: run-chal-v2-template
+            templateRef:
+              name: start-chal-v2-template
+              template: main
+            arguments:
+              parameters:
+                - name: CHALLENGE_NAME
+                  value: "{{workflow.parameters.CHALLENGE_NAME}}"
+                - name: CONTAINER_PORT
+                  value: "{{workflow.parameters.CONTAINER_PORT}}"
+                - name: CONTAINER_IMAGE
+                  value: "{{workflow.parameters.CONTAINER_IMAGE}}"
+                - name: CPU_LIMIT
+                  value: "{{workflow.parameters.CPU_LIMIT}}"
+                - name: CPU_REQUEST
+                  value: "{{workflow.parameters.CPU_REQUEST}}"
+                - name: MEMORY_LIMIT
+                  value: "{{workflow.parameters.MEMORY_LIMIT}}"
+                - name: MEMORY_REQUEST
+                  value: "{{workflow.parameters.MEMORY_REQUEST}}"
+                - name: IS_TEMPORARY
+                  value: "{{workflow.parameters.IS_TEMPORARY}}"
+                - name: CHALLENGE_TIMEOUT
+                  value: "{{workflow.parameters.CHALLENGE_TIMEOUT}}"
+                - name: POW_DIFFICULTY_SECONDS
+                  value: "{{workflow.parameters.POW_DIFFICULTY_SECONDS}}"

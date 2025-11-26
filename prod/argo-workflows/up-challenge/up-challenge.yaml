@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: up-challenge-
+  namespace: argo
+spec:
+  workflowTemplateRef:
+    name: up-challenge-template
+  arguments:
+    parameters:
+      - name: CHALLENGE_PATH
+        value: challenges/datt67-web-sec_resources/challenge/web-base/
+      - name: IMAGE_REPO
+        value: fctf
+      - name: IMAGE_TAG
+        value: "chal-01-supervip-pro"
+      - name: DOCKER_USERNAME
+        value: quachuoiscontainer
+      - name: DOCKER_PASSWORD
+        value: Admin@123

@@ -1,0 +1,121 @@
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: start-challenge-template
+  namespace: argo
+  annotations:
+    workflows.argoproj.io/description: "Template to start and deploy challenge pods"
+spec:
+  serviceAccountName: argo-sa
+  entrypoint: main
+  arguments:
+    parameters:
+      - name: CHALLENGE_NAME
+      - name: CONTAINER_PORT
+      - name: CONTAINER_IMAGE
+      - name: CPU_LIMIT
+      - name: CPU_REQUEST
+      - name: MEMORY_LIMIT
+      - name: MEMORY_REQUEST
+
+  templates:
+    - name: main
+      steps:
+        - - name: check-workspace
+            template: check-workspace
+        - - name: deploy-challenge
+            template: deploy-challenge
+            arguments:
+              parameters:
+                - name: CHALLENGE_NAME
+                  value: "{{workflow.parameters.CHALLENGE_NAME}}"
+                - name: CONTAINER_PORT
+                  value: "{{workflow.parameters.CONTAINER_PORT}}"
+                - name: CONTAINER_IMAGE
+                  value: "{{workflow.parameters.CONTAINER_IMAGE}}"
+                - name: CPU_LIMIT
+                  value: "{{workflow.parameters.CPU_LIMIT}}"
+                - name: CPU_REQUEST
+                  value: "{{workflow.parameters.CPU_REQUEST}}"
+                - name: MEMORY_LIMIT
+                  value: "{{workflow.parameters.MEMORY_LIMIT}}"
+                - name: MEMORY_REQUEST
+                  value: "{{workflow.parameters.MEMORY_REQUEST}}"
+
+    - name: check-workspace
+      container:
+        image: quachuoiscontainer/kubectl-cli:v0.0.3
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
+          runAsNonRoot: false
+          allowPrivilegeEscalation: true
+          privileged: true
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "0.3m"
+          limits:
+            memory: "256Mi"
+            cpu: "0.3m"
+        command: [sh, -c]
+        args:
+          - |
+            echo "=== Checking Argo Pod Workspace ==="
+            echo "Testing kubectl connection:"
+            kubectl get nodes -o wide
+
+    - name: deploy-challenge
+      inputs:
+        parameters:
+          - name: APP_NAME
+          - name: SERVICE_PORT
+          - name: CONTAINER_PORT
+          - name: NODE_PORT
+          - name: REPLICA_COUNT
+          - name: CONTAINER_IMAGE
+          - name: MEMORY_LIMIT
+          - name: CPU_LIMIT
+          - name: CPU_REQUEST
+          - name: MEMORY_REQUEST
+      container:
+        image: quachuoiscontainer/kubectl-cli:v0.0.3
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
+          runAsNonRoot: false
+          allowPrivilegeEscalation: true
+          privileged: true
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "0.3"
+          limits:
+            memory: "256Mi"
+            cpu: "0.3"
+        command: [sh, -c]
+        args:
+          - |
+            set -e
+            echo "=== Deploying Challenge with parameters ==="
+
+            git clone https://github.com/fctf-git-repo/challenge-config.git
+            cd challenge-config/websecpro_chilp-1
+
+            export APP_NAME="{{inputs.parameters.APP_NAME}}"
+            export SERVICE_PORT="{{inputs.parameters.SERVICE_PORT}}"
+            export CONTAINER_PORT="{{inputs.parameters.CONTAINER_PORT}}"
+            export NODE_PORT="{{inputs.parameters.NODE_PORT}}"
+            export REPLICA_COUNT="{{inputs.parameters.REPLICA_COUNT}}"
+            export CONTAINER_IMAGE="{{inputs.parameters.CONTAINER_IMAGE}}"
+            export MEMORY_LIMIT="{{inputs.parameters.MEMORY_LIMIT}}"
+            export CPU_LIMIT="{{inputs.parameters.CPU_LIMIT}}"
+            export CPU_REQUEST="{{inputs.parameters.CPU_REQUEST}}"
+            export MEMORY_REQUEST="{{inputs.parameters.MEMORY_REQUEST}}"
+
+            echo "Applying deployment manifest..."
+            envsubst < challenge.yaml | kubectl apply -f -
+
+            echo "✅ Challenge manifest submitted to cluster"

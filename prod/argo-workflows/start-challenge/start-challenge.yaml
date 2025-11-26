@@ -1,0 +1,105 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: start-challenge-
+  namespace: argo
+  annotations:
+    workflows.argoproj.io/description: "start challenge workflow"
+spec:
+  entrypoint: main
+  serviceAccountName: argo-sa
+  arguments:
+    parameters:
+      - name: APP_NAME
+        value: "chal-01-websecpro-chilp"
+      - name: SERVICE_PORT
+        value: "80"
+      - name: CONTAINER_PORT
+        value: "80"
+      - name: NODE_PORT
+        value: "30080"
+      - name: REPLICA_COUNT
+        value: "1"
+      - name: CONTAINER_IMAGE
+        value: "quachuoiscontainer/kctf-chal-wsproblem:v01"
+      - name: MEMORY_LIMIT
+        value: "256Mi"
+      - name: CPU_LIMIT
+        value: "500m"
+      - name: CPU_REQUEST
+        value: "100m"
+      - name: MEMORY_REQUEST
+        value: "128Mi"
+  templates:
+    - name: main
+      steps:
+        - - name: check-workspace
+            template: check-workspace
+        - - name: deploy-challenge
+            template: deploy-challenge
+
+    - name: check-workspace
+      container:
+        image: quachuoiscontainer/kubectl-cli:v0.0.3
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
+          runAsNonRoot: false
+          allowPrivilegeEscalation: true
+          privileged: true
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "300m"
+        command: [sh, -c]
+        args:
+          - |
+            echo "=== Checking Argo Pod Workspace ==="
+            echo "Current directory: $(pwd)"
+            echo "Testing kubectl connection:"
+            kubectl top nodes
+
+    - name: deploy-challenge
+      container:
+        image: quachuoiscontainer/kubectl-cli:v0.0.3
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
+          runAsNonRoot: false
+          allowPrivilegeEscalation: true
+          privileged: true
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "300m"
+        command: [sh, -c]
+        args:
+          - |
+            set -e
+            echo "=== Deploying Challenge with direct parameters ==="
+
+            git clone https://github.com/fctf-git-repo/challenge-config.git
+            cd challenge-config/websecpro_chilp-1
+
+            export APP_NAME="{{workflow.parameters.APP_NAME}}"
+            export SERVICE_PORT="{{workflow.parameters.SERVICE_PORT}}"
+            export CONTAINER_PORT="{{workflow.parameters.CONTAINER_PORT}}"
+            export NODE_PORT="{{workflow.parameters.NODE_PORT}}"
+            export REPLICA_COUNT="{{workflow.parameters.REPLICA_COUNT}}"
+            export CONTAINER_IMAGE="{{workflow.parameters.CONTAINER_IMAGE}}"
+            export MEMORY_LIMIT="{{workflow.parameters.MEMORY_LIMIT}}"
+            export CPU_LIMIT="{{workflow.parameters.CPU_LIMIT}}"
+            export CPU_REQUEST="{{workflow.parameters.CPU_REQUEST}}"
+            export MEMORY_REQUEST="{{workflow.parameters.MEMORY_REQUEST}}"
+
+            envsubst < challenge.yaml | kubectl apply -f -
+
+            echo "✅ Challenge manifest submitted to cluster"
